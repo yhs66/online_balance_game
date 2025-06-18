@@ -68,7 +68,8 @@
         const userName = urlParams.get("name") || "익명";
 
         // 방 참가
-        socket.emit("join", { room: roomCode, name: userName });
+        socket.emit("join", { room: roomCode, name: userName, isHost: false });
+
 
         // 질문 수신
         socket.on("show_question", data => {
