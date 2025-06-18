@@ -64,7 +64,9 @@
         const roomCode = "{{ code }}";
 
         // 참가자 입장
-        socket.emit("join", { room: roomCode });
+        const userName = "{{ name }}";  // 서버에서 넘긴 이름
+        socket.emit("join", { room: roomCode, name: userName });
+
 
         // 질문 수신
         socket.on("show_question", data => {
