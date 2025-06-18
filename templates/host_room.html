@@ -86,7 +86,8 @@
         let questions = [];
 
         // 참가
-        socket.emit("join", { room: roomCode, name: "호스트", isHost: true });
+        socket.emit("join", { room: "{{ code }}", name: "호스트", isHost: true });
+
 
 
         // 참가자 목록 수신

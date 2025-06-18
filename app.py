@@ -90,10 +90,12 @@ def upload_questions(code):
                 """, (code, item['question'], item['option1'], item['option2']))
             conn.commit()
             conn.close()
-            return f"<h3>✅ {len(data)}개의 질문이 업로드되었습니다!</h3><a href='/host/{code}'>← 돌아가기</a>"
+            return redirect(f'/host/{code}')  # ✅ 여기 수정
         else:
             return "<h3>❌ 올바른 JSON 파일을 업로드해주세요.</h3>"
+
     return render_template('upload_questions.html', code=code)
+
 
 @app.route('/start_game/<code>', methods=['POST'])
 def start_game(code):
@@ -169,15 +171,19 @@ def api_questions(code):
 @socketio.on('join')
 def handle_join(data):
     room = data['room']
+    name = data.get('name', '익명')
+    is_host = data.get('isHost', False)
+
     join_room(room)
 
-    name = data.get('name', '익명')
-    if room not in participants_in_room:
-        participants_in_room[room] = []
-    participants_in_room[room].append(name)
+    if not is_host:
+        if room not in participants_in_room:
+            participants_in_room[room] = []
+        participants_in_room[room].append(name)
 
-    emit("update_participants", participants_in_room[room], to=room)
-    print(f"✅ 클라이언트({name})가 방 {room}에 참가했습니다.")
+    emit("update_participants", participants_in_room.get(room, []), to=room)
+    print(f"✅ {name}가 방 {room}에 참가했습니다.")
+
 
 @socketio.on('send_question')
 def handle_send_question(data):
