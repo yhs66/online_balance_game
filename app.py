@@ -5,11 +5,13 @@ import string
 import json
 from flask_socketio import SocketIO, emit, join_room
 from threading import Timer
+import os
 
 app = Flask(__name__)
 socketio = SocketIO(app)
 
 current_question_data = {}
+participants_in_room = {}
 DATABASE = 'database.db'
 
 def get_db():
@@ -103,31 +105,9 @@ def start_game(code):
     conn.close()
 
     if first_question:
-        return redirect(f"/question/{code}/{first_question['id']}")
+        return redirect(f"/host/{code}")
     else:
         return f"<h3>❌ 질문이 없습니다. 먼저 업로드 해주세요!</h3><a href='/host/{code}'>← 돌아가기</a>"
-
-@app.route('/question/<code>/<int:question_id>')
-def show_question(code, question_id):
-    conn = get_db()
-    q = conn.execute(
-        "SELECT * FROM questions WHERE id = ? AND room_code = ?", 
-        (question_id, code)
-    ).fetchone()
-    conn.close()
-
-    if not q:
-        return "<h3>❌ 질문을 찾을 수 없습니다.</h3>"
-
-    return f"""
-    <h2>{q['question']}</h2>
-    <form action="/submit_choice" method="post">
-        <input type="hidden" name="room_code" value="{code}">
-        <input type="hidden" name="question_id" value="{question_id}">
-        <button type="submit" name="choice" value="1">{q['option1']}</button>
-        <button type="submit" name="choice" value="2">{q['option2']}</button>
-    </form>
-    """
 
 @app.route('/join', methods=['POST'])
 def join():
@@ -135,13 +115,6 @@ def join():
     name = request.form['name']
 
     conn = get_db()
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS participants (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            room_code TEXT,
-            name TEXT
-        );
-    """)
     conn.execute("INSERT INTO participants (room_code, name) VALUES (?, ?)", (code, name))
     conn.commit()
     conn.close()
@@ -186,45 +159,25 @@ def submit_choice():
     else:
         return render_template("game_over.html")
 
-@app.route('/result/<code>/<int:question_id>')
-def show_result(code, question_id):
+@app.route('/api/questions/<code>')
+def api_questions(code):
     conn = get_db()
-
-    question = conn.execute(
-        "SELECT * FROM questions WHERE id = ? AND room_code = ?", 
-        (question_id, code)
-    ).fetchone()
-
-    count_1 = conn.execute(
-        "SELECT COUNT(*) FROM choices WHERE room_code = ? AND question_id = ? AND choice = '1'",
-        (code, question_id)
-    ).fetchone()[0]
-
-    count_2 = conn.execute(
-        "SELECT COUNT(*) FROM choices WHERE room_code = ? AND question_id = ? AND choice = '2'",
-        (code, question_id)
-    ).fetchone()[0]
-
-    total = count_1 + count_2
-    percent_1 = round((count_1 / total) * 100) if total > 0 else 0
-    percent_2 = round((count_2 / total) * 100) if total > 0 else 0
-
+    result = conn.execute("SELECT * FROM questions WHERE room_code = ? ORDER BY id", (code,)).fetchall()
     conn.close()
-
-    return render_template(
-        'result.html',
-        question=question,
-        count_1=count_1,
-        count_2=count_2,
-        percent_1=percent_1,
-        percent_2=percent_2
-    )
+    return [dict(row) for row in result]
 
 @socketio.on('join')
 def handle_join(data):
     room = data['room']
     join_room(room)
-    print(f"✅ 클라이언트가 방 {room}에 참가했습니다.")
+
+    name = data.get('name', '익명')
+    if room not in participants_in_room:
+        participants_in_room[room] = []
+    participants_in_room[room].append(name)
+
+    emit("update_participants", participants_in_room[room], to=room)
+    print(f"✅ 클라이언트({name})가 방 {room}에 참가했습니다.")
 
 @socketio.on('send_question')
 def handle_send_question(data):
@@ -238,23 +191,7 @@ def handle_send_question(data):
     }
 
     emit('show_question', question, to=room)
-    print(f"🕐 타이머 시작! 방 {room} 질문 {question['question']}")
-    Timer(10, send_result, args=[room]).start()
-
-def send_result(room):
-    result = current_question_data.get(room, {})
-    answers = result.get('answers', {'1': 0, '2': 0})
-    total = answers['1'] + answers['2']
-    percent_1 = round((answers['1'] / total) * 100) if total else 0
-    percent_2 = round((answers['2'] / total) * 100) if total else 0
-
-    emit('show_result', {
-        'question_id': result.get('question_id'),
-        'count_1': answers['1'],
-        'count_2': answers['2'],
-        'percent_1': percent_1,
-        'percent_2': percent_2
-    }, to=room)
+    print(f"🕐 질문 전송: 방 {room} → {question['question']}")
 
 @socketio.on('submit_answer')
 def handle_submit_answer(data):
@@ -264,13 +201,6 @@ def handle_submit_answer(data):
     if room in current_question_data and choice in ['1', '2']:
         current_question_data[room]['answers'][choice] += 1
         print(f"✅ 응답 수집: 방 {room}, 선택 {choice}")
-
-@app.route('/api/questions/<code>')
-def api_questions(code):
-    conn = get_db()
-    result = conn.execute("SELECT * FROM questions WHERE room_code = ? ORDER BY id", (code,)).fetchall()
-    conn.close()
-    return [dict(row) for row in result]
 
 @socketio.on('show_result')
 def handle_show_result(data):
@@ -300,10 +230,13 @@ def handle_show_result(data):
         'percent_2': p2
     }, to=room)
 
+@socketio.on('game_over')
+def handle_game_over(data):
+    room = data['room']
+    emit('game_over', to=room)
+    print(f"🎮 게임 종료: 방 {room}")
 
 if __name__ == '__main__':
     init_db()
-    import os
     port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host='0.0.0.0', port=port)
-

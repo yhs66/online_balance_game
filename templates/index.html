@@ -23,9 +23,18 @@
         h1 {
             margin-bottom: 30px;
         }
-        button {
-            padding: 15px 25px;
+        form {
             margin: 10px;
+        }
+        input {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            margin: 5px;
+        }
+        button {
+            padding: 12px 20px;
             font-size: 18px;
             border: none;
             border-radius: 8px;
@@ -37,12 +46,11 @@
         button:hover {
             background-color: #0056b3;
         }
-        input[type="text"] {
-            padding: 10px;
-            font-size: 16px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-            margin: 5px;
+        .green-button {
+            background-color: #28a745;
+        }
+        .green-button:hover {
+            background-color: #1e7e34;
         }
     </style>
 </head>
@@ -50,15 +58,15 @@
     <div class="container">
         <h1>🔥 실시간 밸런스 게임</h1>
         <form method="POST" action="/create_room">
-            <button type="submit">🧩 방 만들기 (호스트)</button>
+            <button type="submit">방 만들기</button>
         </form>
         <form method="POST" action="/join">
-            <input type="text" name="code" placeholder="방 코드 입력" required>
-            <input type="text" name="name" placeholder="이름 입력" required>
-            <button type="submit">🚪 참가하기</button>
+            <input type="text" name="code" placeholder="방 코드" required>
+            <input type="text" name="name" placeholder="이름" required>
+            <button type="submit">방 참가</button>
         </form>
         <form method="GET" action="/create_questions">
-            <button type="submit" style="background-color: #28a745;">✍ 질문 만들기</button>
+            <button type="submit" class="green-button">질문 만들기</button>
         </form>
     </div>
 </body>

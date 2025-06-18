@@ -63,8 +63,12 @@
         const socket = io();
         const roomCode = "{{ code }}";
 
-        // 참가자 입장
-        socket.emit("join", { room: roomCode });
+        // URL에서 이름 추출
+        const urlParams = new URLSearchParams(window.location.search);
+        const userName = urlParams.get("name") || "익명";
+
+        // 방 참가
+        socket.emit("join", { room: roomCode, name: userName });
 
         // 질문 수신
         socket.on("show_question", data => {
