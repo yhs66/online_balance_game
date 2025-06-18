@@ -97,12 +97,14 @@ def upload_questions(code):
 # 참가자 화면
 @app.route('/room/<code>')
 def room(code):
-    return render_template('join_room.html', code=code)
+    name = request.args.get("name", "익명")
+    return render_template('join_room.html', code=code, name=name)
 
 @app.route('/join', methods=['POST'])
 def join():
     code = request.form['code']
-    return redirect(f"/room/{code}")
+    name = request.form['name']
+    return redirect(f"/room/{code}?name={name}")
 
 # 소켓: 참가자 입장
 @socketio.on('join')

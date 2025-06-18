@@ -37,18 +37,29 @@
         button:hover {
             background-color: #0056b3;
         }
+        input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            margin: 5px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🔥 실시간 밸런스 게임</h1>
+
         <form method="POST" action="/create_room">
             <button type="submit">방 만들기</button>
         </form>
+
         <form method="POST" action="/join">
-            <input type="text" name="code" placeholder="방 코드 입력" required style="padding: 10px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc;">
+            <input type="text" name="code" placeholder="방 코드 입력" required>
+            <input type="text" name="name" placeholder="참가자 이름 입력" required>
             <button type="submit">방 참가</button>
         </form>
+
         <form method="GET" action="/create_questions">
             <button type="submit" style="background-color: #28a745;">질문 만들기</button>
         </form>
