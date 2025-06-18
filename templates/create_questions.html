@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>질문 만들기</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script>
+    let questions = [];
+
+    function addQuestion() {
+        const q = document.getElementById("question").value;
+        const o1 = document.getElementById("option1").value;
+        const o2 = document.getElementById("option2").value;
+
+        if (!q || !o1 || !o2) {
+            alert("모든 필드를 입력하세요!");
+            return;
+        }
+
+        questions.push({ question: q, option1: o1, option2: o2 });
+        document.getElementById("question").value = "";
+        document.getElementById("option1").value = "";
+        document.getElementById("option2").value = "";
+
+        updatePreview();
+    }
+
+    function updatePreview() {
+        const preview = document.getElementById("preview");
+        preview.innerHTML = "";
+        questions.forEach((q, i) => {
+            preview.innerHTML += `<li>${i + 1}. ${q.question} (${q.option1} / ${q.option2})</li>`;
+        });
+    }
+
+    function downloadJSON() {
+        const blob = new Blob([JSON.stringify(questions, null, 2)], {type : 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "questions.json";
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+    </script>
+</head>
+<body>
+<div class="container">
+    <h2>질문 생성기</h2>
+    <input id="question" placeholder="질문 입력"><br>
+    <input id="option1" placeholder="선택지 1"><br>
+    <input id="option2" placeholder="선택지 2"><br>
+    <button onclick="addQuestion()">➕ 추가</button>
+    <button onclick="downloadJSON()">⬇ JSON 다운로드</button>
+
+    <h3>미리보기</h3>
+    <ul id="preview"></ul>
+</div>
+</body>
+</html>

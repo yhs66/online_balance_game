@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>참가자 화면</title>
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 40px;
+            background-color: #f5f5f5;
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        #question {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            font-size: 18px;
+            padding: 12px 24px;
+            margin: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: #007BFF;
+            color: white;
+            transition: 0.3s ease;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        #result-box {
+            margin-top: 30px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h2>참가자 화면 – 방 코드: {{ code }}</h2>
+
+    <div id="question-box">
+        <p id="question">문제가 여기에 표시됩니다.</p>
+        <button id="opt1" style="display:none;"></button>
+        <button id="opt2" style="display:none;"></button>
+    </div>
+
+    <div id="result-box"></div>
+
+    <script>
+        const socket = io();
+        const roomCode = "{{ code }}";
+
+        // 참가자 입장
+        socket.emit("join", { room: roomCode });
+
+        // 질문 수신
+        socket.on("show_question", data => {
+            document.getElementById("question").innerText = data.question;
+            document.getElementById("opt1").innerText = "① " + data.option1;
+            document.getElementById("opt2").innerText = "② " + data.option2;
+
+            document.getElementById("opt1").disabled = false;
+            document.getElementById("opt2").disabled = false;
+            document.getElementById("opt1").style.display = "inline-block";
+            document.getElementById("opt2").style.display = "inline-block";
+
+            document.getElementById("result-box").style.display = "none";
+        });
+
+        // 버튼 클릭 → 답변 제출 + 비활성화
+        document.getElementById("opt1").onclick = () => {
+            socket.emit("submit_answer", { room: roomCode, choice: 1 });
+            lockButtons();
+        };
+        document.getElementById("opt2").onclick = () => {
+            socket.emit("submit_answer", { room: roomCode, choice: 2 });
+            lockButtons();
+        };
+
+        function lockButtons() {
+            document.getElementById("opt1").disabled = true;
+            document.getElementById("opt2").disabled = true;
+        }
+
+        // 결과 수신
+        socket.on("show_result", data => {
+            const box = document.getElementById("result-box");
+            box.style.display = "block";
+            box.innerHTML = `
+                <h3>결과</h3>
+                <p>①: ${data.count_1}명 (${data.percent_1}%)</p>
+                <p>②: ${data.count_2}명 (${data.percent_2}%)</p>
+            `;
+
+            document.getElementById("opt1").style.display = "none";
+            document.getElementById("opt2").style.display = "none";
+        });
+
+        // 게임 종료
+        socket.on("game_over", () => {
+            document.getElementById("question").innerText = "🎉 모든 질문이 완료되었습니다!";
+            document.getElementById("opt1").style.display = "none";
+            document.getElementById("opt2").style.display = "none";
+            document.getElementById("result-box").style.display = "none";
+        });
+    </script>
+</body>
+</html>

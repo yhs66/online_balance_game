@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>호스트 화면</title>
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .btn { padding: 10px 20px; margin: 5px; background: #007BFF; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .btn:disabled { background: #aaa; cursor: not-allowed; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <h2>호스트 화면 – 방 코드: {{ code }}</h2>
+
+    <div id="setup-controls">
+        <a href="/host/{{ code }}/upload" class="btn">질문 업로드</a>
+        <button id="start-btn" class="btn" onclick="startGame()">게임 시작</button>
+    </div>
+
+    <div id="question-box" class="hidden">
+        <p id="question"></p>
+        <p><b>1번:</b> <span id="opt1"></span></p>
+        <p><b>2번:</b> <span id="opt2"></span></p>
+        <button id="end-btn" class="btn" onclick="endQuestion()">질문 끝내기</button>
+    </div>
+
+    <div id="result-box" class="hidden">
+        <button id="next-btn" class="btn" onclick="nextQuestion()">다음 질문</button>
+        <h3>결과</h3>
+        <canvas id="resultChart" width="300" height="150"></canvas>
+    </div>
+
+    <div>
+        <h4>참가자 목록:</h4>
+        <ul id="participant-list"></ul>
+    </div>
+
+    <script>
+        const socket = io();
+        const roomCode = "{{ code }}";
+        let chart;
+
+        socket.emit("join", { room: roomCode, role: "host" });
+
+        function startGame() {
+            socket.emit("start_game", { room: roomCode });
+            document.getElementById("setup-controls").style.display = "none";
+        }
+
+        function endQuestion() {
+            socket.emit("end_question", { room: roomCode });
+            document.getElementById("question-box").classList.add("hidden");
+        }
+
+        function nextQuestion() {
+            socket.emit("next_question", { room: roomCode });
+            document.getElementById("result-box").classList.add("hidden");
+        }
+
+        socket.on("show_question", data => {
+            document.getElementById("question-box").classList.remove("hidden");
+            document.getElementById("result-box").classList.add("hidden");
+
+            document.getElementById("question").innerText = data.question;
+            document.getElementById("opt1").innerText = data.option1;
+            document.getElementById("opt2").innerText = data.option2;
+
+            // 버튼 숨기기
+            document.getElementById("setup-controls").style.display = "none";
+        });
+
+        socket.on("show_result", data => {
+            document.getElementById("result-box").classList.remove("hidden");
+
+            const ctx = document.getElementById('resultChart').getContext('2d');
+            if (chart) chart.destroy();
+
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['1번', '2번'],
+                    datasets: [{
+                        label: '응답 수',
+                        data: [data.count_1, data.count_2],
+                        backgroundColor: ['#4CAF50', '#FF5733']
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: { beginAtZero: true }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        });
+
+        socket.on("participant_list", names => {
+            const ul = document.getElementById("participant-list");
+            ul.innerHTML = "";
+            names.forEach(name => {
+                const li = document.createElement("li");
+                li.innerText = name;
+                ul.appendChild(li);
+            });
+        });
+
+        socket.on("game_over", () => {
+            document.getElementById("question-box").classList.add("hidden");
+            document.getElementById("result-box").innerHTML = "<h2>게임 종료!</h2>";
+        });
+    </script>
+</body>
+</html>

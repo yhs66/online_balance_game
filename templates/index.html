@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>밸런스 게임</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f0f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 15px 25px;
+            margin: 10px;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            background-color: #007BFF;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔥 실시간 밸런스 게임</h1>
+        <form method="POST" action="/create_room">
+            <button type="submit">방 만들기</button>
+        </form>
+        <form method="POST" action="/join">
+            <input type="text" name="code" placeholder="방 코드 입력" required style="padding: 10px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc;">
+            <button type="submit">방 참가</button>
+        </form>
+        <form method="GET" action="/create_questions">
+            <button type="submit" style="background-color: #28a745;">질문 만들기</button>
+        </form>
+    </div>
+</body>
+</html>
