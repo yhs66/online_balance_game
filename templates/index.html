@@ -23,18 +23,9 @@
         h1 {
             margin-bottom: 30px;
         }
-        form {
-            margin: 10px;
-        }
-        input {
-            padding: 10px;
-            font-size: 16px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-            margin: 5px;
-        }
         button {
-            padding: 12px 20px;
+            padding: 15px 25px;
+            margin: 10px;
             font-size: 18px;
             border: none;
             border-radius: 8px;
@@ -46,12 +37,6 @@
         button:hover {
             background-color: #0056b3;
         }
-        .green-button {
-            background-color: #28a745;
-        }
-        .green-button:hover {
-            background-color: #1e7e34;
-        }
     </style>
 </head>
 <body>
@@ -61,12 +46,11 @@
             <button type="submit">방 만들기</button>
         </form>
         <form method="POST" action="/join">
-            <input type="text" name="code" placeholder="방 코드" required>
-            <input type="text" name="name" placeholder="이름" required>
+            <input type="text" name="code" placeholder="방 코드 입력" required style="padding: 10px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc;">
             <button type="submit">방 참가</button>
         </form>
         <form method="GET" action="/create_questions">
-            <button type="submit" class="green-button">질문 만들기</button>
+            <button type="submit" style="background-color: #28a745;">질문 만들기</button>
         </form>
     </div>
 </body>

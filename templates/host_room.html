@@ -1,161 +1,117 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html>
 <head>
-    <meta charset="UTF-8">
     <title>호스트 화면</title>
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: #f8f9fa;
-            margin: 0;
-            padding: 30px;
-            color: #333;
-        }
-        h2 {
-            margin-bottom: 10px;
-        }
-        #question-box {
-            margin-top: 20px;
-            background: #fff;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        #buttons {
-            margin-top: 20px;
-        }
-        button {
-            font-size: 16px;
-            padding: 12px 24px;
-            margin: 5px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        button:hover {
-            opacity: 0.9;
-        }
-        .start-btn { background-color: #007bff; color: white; }
-        .upload-btn { background-color: #6c757d; color: white; }
-        .next-btn { background-color: #28a745; color: white; }
-        #result {
-            margin-top: 20px;
-        }
-        #participant-list {
-            list-style: none;
-            padding-left: 0;
-            margin-top: 10px;
-        }
+        body { font-family: sans-serif; padding: 20px; }
+        .btn { padding: 10px 20px; margin: 5px; background: #007BFF; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .btn:disabled { background: #aaa; cursor: not-allowed; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
     <h2>호스트 화면 – 방 코드: {{ code }}</h2>
 
-    <!-- 참가자 목록 -->
+    <div id="setup-controls">
+        <a href="/host/{{ code }}/upload" class="btn">질문 업로드</a>
+        <button id="start-btn" class="btn" onclick="startGame()">게임 시작</button>
+    </div>
+
+    <div id="question-box" class="hidden">
+        <p id="question"></p>
+        <p><b>1번:</b> <span id="opt1"></span></p>
+        <p><b>2번:</b> <span id="opt2"></span></p>
+        <button id="end-btn" class="btn" onclick="endQuestion()">질문 끝내기</button>
+    </div>
+
+    <div id="result-box" class="hidden">
+        <button id="next-btn" class="btn" onclick="nextQuestion()">다음 질문</button>
+        <h3>결과</h3>
+        <canvas id="resultChart" width="300" height="150"></canvas>
+    </div>
+
     <div>
-        <h3>참가자 목록</h3>
+        <h4>참가자 목록:</h4>
         <ul id="participant-list"></ul>
-    </div>
-
-    <!-- 버튼 영역 -->
-    <div id="buttons">
-        <form method="GET" action="/host/{{ code }}/upload" style="display: inline;">
-            <button type="submit" class="upload-btn" id="upload-btn">질문 업로드</button>
-        </form>
-
-        <form method="POST" action="/start_game/{{ code }}" style="display: inline;">
-            <button type="submit" class="start-btn" id="start-btn">게임 시작</button>
-        </form>
-
-        <button class="next-btn" id="next-btn" style="display:none;">다음 질문</button>
-    </div>
-
-    <!-- 질문 표시 -->
-    <div id="question-box">
-        <h3 id="question">질문이 여기에 표시됩니다</h3>
-        <div id="result"></div>
     </div>
 
     <script>
         const socket = io();
         const roomCode = "{{ code }}";
+        let chart;
 
-        let currentIndex = 0;
-        let questions = [];
+        socket.emit("join", { room: roomCode, role: "host" });
 
-        // 참가
-        socket.emit("join", { room: "{{ code }}", name: "호스트", isHost: true });
+        function startGame() {
+            socket.emit("start_game", { room: roomCode });
+            document.getElementById("setup-controls").style.display = "none";
+        }
 
+        function endQuestion() {
+            socket.emit("end_question", { room: roomCode });
+            document.getElementById("question-box").classList.add("hidden");
+        }
 
+        function nextQuestion() {
+            socket.emit("next_question", { room: roomCode });
+            document.getElementById("result-box").classList.add("hidden");
+        }
 
-        // 참가자 목록 수신
-        socket.on("update_participants", names => {
-            const list = document.getElementById("participant-list");
-            list.innerHTML = "";
-            names.forEach(name => {
-                const li = document.createElement("li");
-                li.textContent = name;
-                list.appendChild(li);
+        socket.on("show_question", data => {
+            document.getElementById("question-box").classList.remove("hidden");
+            document.getElementById("result-box").classList.add("hidden");
+
+            document.getElementById("question").innerText = data.question;
+            document.getElementById("opt1").innerText = data.option1;
+            document.getElementById("opt2").innerText = data.option2;
+
+            // 버튼 숨기기
+            document.getElementById("setup-controls").style.display = "none";
+        });
+
+        socket.on("show_result", data => {
+            document.getElementById("result-box").classList.remove("hidden");
+
+            const ctx = document.getElementById('resultChart').getContext('2d');
+            if (chart) chart.destroy();
+
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['1번', '2번'],
+                    datasets: [{
+                        label: '응답 수',
+                        data: [data.count_1, data.count_2],
+                        backgroundColor: ['#4CAF50', '#FF5733']
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: { beginAtZero: true }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
             });
         });
 
-        // 질문 수신
-        socket.on("show_question", data => {
-            document.getElementById("question").innerText = data.question;
-            document.getElementById("result").innerHTML = "";
-            document.getElementById("next-btn").style.display = "none";
-
-            // 버튼 숨기기 (게임 시작 후)
-            document.getElementById("upload-btn").style.display = "none";
-            document.getElementById("start-btn").style.display = "none";
+        socket.on("participant_list", names => {
+            const ul = document.getElementById("participant-list");
+            ul.innerHTML = "";
+            names.forEach(name => {
+                const li = document.createElement("li");
+                li.innerText = name;
+                ul.appendChild(li);
+            });
         });
 
-        // 결과 수신
-        socket.on("show_result", data => {
-            document.getElementById("result").innerHTML = `
-                <h4>결과</h4>
-                <div>①: ${data.count_1}명 (${data.percent_1}%)</div>
-                <div>②: ${data.count_2}명 (${data.percent_2}%)</div>
-                <div style="margin-top: 10px;">
-                    <div style="background: #007bff; height: 20px; width: ${data.percent_1}%; border-radius: 8px; margin-bottom: 5px;"></div>
-                    <div style="background: #28a745; height: 20px; width: ${data.percent_2}%; border-radius: 8px;"></div>
-                </div>
-            `;
-            document.getElementById("next-btn").style.display = "inline-block";
+        socket.on("game_over", () => {
+            document.getElementById("question-box").classList.add("hidden");
+            document.getElementById("result-box").innerHTML = "<h2>게임 종료!</h2>";
         });
-
-        // 다음 질문 버튼 → emit
-        document.getElementById("next-btn").onclick = () => {
-            currentIndex++;
-            if (currentIndex < questions.length) {
-                socket.emit("send_question", {
-                    room: roomCode,
-                    question: questions[currentIndex],
-                    question_id: questions[currentIndex].id
-                });
-            } else {
-                socket.emit("game_over", { room: roomCode });
-                document.getElementById("question").innerText = "🎉 모든 질문이 완료되었습니다!";
-                document.getElementById("result").innerHTML = "";
-                document.getElementById("next-btn").style.display = "none";
-            }
-        };
-
-        // 게임 시작 시 질문 목록 불러오기
-        window.onload = async () => {
-            const res = await fetch(`/api/questions/${roomCode}`);
-            questions = await res.json();
-            if (questions.length > 0) {
-                currentIndex = 0;
-                socket.emit("send_question", {
-                    room: roomCode,
-                    question: questions[currentIndex],
-                    question_id: questions[currentIndex].id
-                });
-            }
-        };
     </script>
 </body>
 </html>
